@@ -53,10 +53,9 @@ def tokenize(commands):
 
 	return tokens
 
-# Parses and executes commands
+# Parses and executes basic commands
 # TODO: wild cards, flags 
-def execute_commands(commands):
-	tokens = tokenize(commands)
+def execute_commands(tokens):
 	if len(tokens) == 1:
 		inp = tokens[0]
 		if inp == "pwd":	# Working directory filepath
@@ -77,24 +76,23 @@ def execute_commands(commands):
 			for element in tokens:
 				if element != "echo":
 					out += element + ' '
-			print(out)
-		elif "|" in tokens:	# Piping
-			pipe(tokens)
+			print(col.OUT + out)
 		else:
 			print(col.BAD + "Invalid command, type \"help\" for list of available commands")
+	if "|" in tokens: # Piping
+		execute_pipe(tokens)
+	if "<" in tokens:
+		pass
+	if ">" in tokens:
+		pass
 
 # TODO
 def expand(wildcard):
 	pass
 
 # TODO probably gonna get really messy. decide how execute commands and pipe are gonna tie together since interconnected
-def pipe(tokens):
-	f_in = os.dup(0)
-	f_out = os.dup(1)
-	fdin = os.dup(f_in)
-	for cmd in 
-
-
+def execute_pipe(tokens):
+	# reads tokens before and after pipe. calls execute_commands
 
 # Print current working directory
 def pwd():
@@ -110,7 +108,7 @@ def ls():
 	output = str(subprocess.call("ls"))
 	return output[:-1]	# Hides exit status
 
-# Changes working directory TODO: add shortcuts
+# Changes working directory TODO: add shortcuts 
 def cd(path):
 	if path == "home":
 		home = os.path.expanduser('~')
@@ -144,7 +142,8 @@ def main():
 		elif commands == "help":
 			help()
 		else:
-			execute_commands(commands)
+			tokens = tokenize(commands)
+			execute_commands(tokens)
 
 if __name__ == "__main__":
 	main()
