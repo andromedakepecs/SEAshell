@@ -3,125 +3,75 @@ import subprocess
 
 '''
 SEAshell
-By Andromeda Kepecs
-Date Created: March 10, 2021
-Last Modified: 3/10/2021
+Author: Andromeda Kepecs
 '''
 
 # Colored text
-class col:
+class Color:
 	BAD = '\033[91m'	# Warnings, exceptions, etc. (red)
 	IN = '\u001b[37m'	# User input and files (white)
 	OUT = '\u001b[32m'	# Shell output (green)
 	PROMPT = '\033[96m'	# Shell prompt (cyan)
 	BOLD = '\u001b[35m'	# Bold (magenta)
 
-# Creates tokens from user input accounting for quotes and backslashes
-def tokenize(commands):
-
-	new = commands
-
-	if "\\" in commands:	# Backslash
-		new = ""
-		for i in range(len(commands)):
-			if commands[i] == "\\":
-				if commands[i + 1] == '"':
-					new += "%"
-			else:
-				new += commands[i]
-
-	if '"' in new:	# Quotes
-		new1 = ""
-		quote = False
-		for char in new:
-			if char == '"':
-				if quote == False:
-					quote = True
-				else:
-					quote = False
-			if quote == True and char == " ":
-				new1 += "$"
-			else:
-				if char != '"':
-					new1 += char
-		commands = new1
-
-
-	temp = commands.split(" ")
-	temp1 = [item.replace('$', ' ') for item in temp]
-	tokens = [item.replace('%', '"') for item in temp1]
-
-	return tokens
-
-# Parses and executes basic commands
-# TODO: wild cards, flags 
-def execute_commands(tokens):
-	if len(tokens) == 1:
-		inp = tokens[0]
-		if inp == "pwd":	# Working directory filepath
-			pwd()
-		elif inp == "jobs":	# Running processes
-			print(col.OUT + str(jobs()))
-		elif inp == "cd":	# Home directory
-			cd("home")
-		elif inp == "ls":	# List files
-			ls()
-		else:
-			print(col.BAD + "Invalid command, type \"help\" for list of available commands")
-	else:
-		if tokens[0] == "cd":	#Change CWD
-			cd(tokens[1])
-		elif tokens[0] == "echo":	# Echo input
-			out = ""
-			for element in tokens:
-				if element != "echo":
-					out += element + ' '
-			print(col.OUT + out)
-		else:
-			print(col.BAD + "Invalid command, type \"help\" for list of available commands")
-	if "|" in tokens: # Piping
-		execute_pipe(tokens)
-	if "<" in tokens:
-		pass
-	if ">" in tokens:
-		pass
-
-# TODO
-def expand(wildcard):
-	pass
-
-# TODO probably gonna get really messy. decide how execute commands and pipe are gonna tie together since interconnected
-def execute_pipe(tokens):
-	# reads tokens before and after pipe. calls execute_commands
-
-# Print current working directory
-def pwd():
-	print(col.OUT + str(os.getcwd()))
-
-# Returns currently running processes TODO: formatting
-def jobs():
-	output = subprocess.Popen(['ps', '-U', '0'], stdout=subprocess.PIPE).communicate()[0]
-	return output
-
-# Lists files in current directory TODO: flags
-def ls():
-	output = str(subprocess.call("ls"))
-	return output[:-1]	# Hides exit status
-
 # Changes working directory TODO: add shortcuts 
 def cd(path):
 	if path == "home":
-		home = os.path.expanduser('~')
+		home = os.path.expanduser('~')	# Universal home directory
 		os.chdir(home)
+	elif path == "-":
+		# TODO switch to previous directory
+		pass
 	else:
 		try:
 			os.chdir(path)
 		except OSError:
-			print(col.BAD + "Unable to change current working directory")
+			print(Color.BAD + "Unable to change current working directory")
 
-# TODO
-def help():
-	print(col.OUT + "help")
+# Turns input into list of tokens
+def tokenize(inp):
+	if inp[-1] != " ":	# Caters to appending commands based on spaces
+		inp += " "
+
+	cmd = ""
+	quotes = False
+	backslash = False
+	tokens = []
+
+	# Adds characters to command until space, unless quotes are around input. Backslashes stop fn of following char
+	for i in range(len(inp)):
+		current = inp[i]
+		if current == "\\":
+			backslash = True
+		if current == '"':
+			if not backslash:
+				if not quotes:
+					quotes = True
+				else:
+					quotes = False
+			else:
+				cmd += current
+				backslash = False
+		if current == " ":
+			if not quotes:
+				tokens.append(cmd)
+				cmd = ""
+			else:
+				cmd += current
+		elif current != '"' and not backslash:
+			cmd += current
+
+	return(tokens)
+
+
+# Parses and executes tokens
+def parse(tokens):
+	# state machine (ints)
+	# global var next state (0 = expecting command)
+	# parser. get me next token. if statement, if state is expecting command do x
+	# ? stack = []
+	# for element in tokens:
+	pass
 
 # Indicate superuser
 def prompt():
@@ -133,18 +83,18 @@ def prompt():
 
 # Main
 def main():
-	print(col.BOLD + "Welcome to the Swaggy Elementary Andromeda shell")
+	print(Color.BOLD + "Welcome to the Swaggy Expiramental Andromeda shell")
 	while True:
-		commands = input(col.PROMPT + "SEAshell:" + str(os.path.basename(os.getcwd())) + " " + os.getlogin() + prompt() + col.IN)
+		commands = input(Color.PROMPT + "SEAshell:" + str(os.path.basename(os.getcwd())) + " " + os.getlogin() + prompt() + Color.IN)
 		if commands == "exit":
-			print(col.OUT + "Terminated")
+			print(Color.OUT + "Terminated")
 			break
 		elif commands == "help":
 			help()
 		else:
-			tokens = tokenize(commands)
-			execute_commands(tokens)
+			tokenize(commands)
 
 if __name__ == "__main__":
 	main()
+
 
