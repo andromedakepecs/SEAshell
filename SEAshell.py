@@ -1,5 +1,7 @@
 import os
 import subprocess
+import sys
+
 
 '''
 SEAshell
@@ -76,25 +78,29 @@ def parse(tokens):
 		element = tokens[i]
 		# TODO other special cases
 		if expecting == "command":	# Command parsing segment
-			try:
-				if element == "echo":	# Echo special case
-					new = ""
-					for j in range(i + 1, len(tokens)):
-						new += tokens[j] + " "
-					print(new)
-					break
-				if element == "cd":	# Change CWD special case
-					if len(tokens) == 1:
-						cd("home")
-					else:
-						cd(tokens[i + 1])
+			if element == "echo":	# Echo special case
+				new = ""
+				for j in range(i + 1, len(tokens)):
+					new += tokens[j] + " "
+				print(new)
+				break
+			if element == "cd":	# Change CWD special case
+				if len(tokens) == 1:
+					cd("home")
 				else:
-					if os.path.isfile(element) and os.access(element, os.X_OK):	# Checks if executable exists
-						stack.append(element)
-						expecting = "argument"
-			except Exception:
+					cd(tokens[i + 1])
+				break
+			else: 	# Shell builtins
+				x_ok1 = os.access("/bin/" + element, os.X_OK)
+				x_ok2 = os.access("/usr/bin/" + element, os.X_OK)
+				if x_ok1 or x_ok2:	# Checks if executable
+					stack.append(element)
+					expecting = "argument"
+				else:
 					print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
+
 		if expecting == "argument":	# Parses other arguments, including wildcards
+			# if there is no next token, execute stack
 			# if next token is operator, expecting = operator. 
 			# also execute commands on stack and get ready to do something with output
 			pass
@@ -102,7 +108,7 @@ def parse(tokens):
 			# after doing certain functions, expecting = target
 			pass
 		if expecting == "target":	# Dealing with operator target files
-			# pass
+			pass
 
 
 
