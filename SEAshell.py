@@ -67,27 +67,15 @@ def tokenize(inp):
 
 	return tokens
 
-# Parses and executes tokens
+# Parses and executes tokens. Does not support semicolons
 # TODO $(x)
-# Does not support semicolons
 def parse(tokens):
-	# state machine (expecting)
-	# global var next state (0 = expecting command)
-	# parser. get me next token. if statement, if state is expecting command do x
-	# ? stack = []
-
-	# Tracks execution state. 
-	# 0 = expecting command (first thing) (when expecting command look at if builtin table or look in /bin, userlocal bin home directory etc)
-	# need full path to command unless it's a builtin
-	# 1 = expecting arguments, . by default processing argument unless see other things. deal with wildcards here
-	# 2 = expecting operator, 3 = expecting target
-
-
-	expecting = "command"	# Shell begins by expecting command
+	expecting = "command"	# Shell always begins by expecting command
 	stack = []	
 	for i in range(len(tokens)):
 		element = tokens[i]
-		if expecting == "command":
+		# TODO other special cases
+		if expecting == "command":	# Command parsing segment
 			try:
 				if element == "echo":	# Echo special case
 					new = ""
@@ -106,6 +94,15 @@ def parse(tokens):
 						expecting = "argument"
 			except Exception:
 					print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
+		if expecting == "argument":	# Parses other arguments, including wildcards
+			# if next token is operator, expecting = operator. 
+			# also execute commands on stack and get ready to do something with output
+			pass
+		if expecting == "operator":	# Dealing with operators
+			# after doing certain functions, expecting = target
+			pass
+		if expecting == "target":	# Dealing with operator target files
+			# pass
 
 
 
