@@ -1,7 +1,6 @@
 import os
 import subprocess
-import sys
-
+import glob
 
 '''
 SEAshell
@@ -21,9 +20,6 @@ def cd(path):
 	if path == "home":
 		home = os.path.expanduser('~')	# Universal home directory
 		os.chdir(home)
-	elif path == "-":
-		# TODO switch to previous directory
-		pass
 	else:
 		try:
 			os.chdir(path)
@@ -69,11 +65,12 @@ def tokenize(inp):
 
 	return tokens
 
-# Parses and executes tokens. Does not support semicolons
+# Parses and executes tokens. Does not support semicolons.
 # TODO $(x)
 def parse(tokens):
+	special_operators = [">", "<", "|", "&"]
 	expecting = "command"	# Shell always begins by expecting command
-	stack = []	
+	arg_list = []	
 	for i in range(len(tokens)):
 		element = tokens[i]
 		# TODO other special cases
@@ -90,26 +87,54 @@ def parse(tokens):
 				else:
 					cd(tokens[i + 1])
 				break
-			else: 	# Shell builtins
-				x_ok1 = os.access("/bin/" + element, os.X_OK)
-				x_ok2 = os.access("/usr/bin/" + element, os.X_OK)
-				if x_ok1 or x_ok2:	# Checks if executable
-					stack.append(element)
-					expecting = "argument"
+			else:
+				# Check relevant cmd locations 	
+				xok_bin = os.access("/bin/" + element, os.X_OK)
+				xok_usrbin = os.access("/usr/bin/" + element, os.X_OK)
+				xok_cwd = os.access(os.getcwd() + element, os.X_OK)
+				xok_homedir = os.access(os.path.expanduser('~') + element, os.X_OK)
+
+				if xok_bin or xok_usrbin or xok_cwd or xok_homedir:	# Check if executable 
+					if len(tokens) == 1:
+						subprocess.run(tokens)	# Execute tokens if only one command
+					else:
+						if xok_bin:
+							arg_list.append("/bin/" + element)
+						elif xok_usrbin:
+							arg_list.append("/usr/bin/" + element)
+						elif xok_cwd:
+							arg_list.append(os.getcwd() + element)
+						else:
+							arg_list.append(os.path.expanduser('~') + element)
+						expecting = "argument"
+						print(element + " appended to arg list. Expecting argument")
 				else:
 					print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
-
-		if expecting == "argument":	# Parses other arguments, including wildcards
-			# if there is no next token, execute stack
-			# if next token is operator, expecting = operator. 
-			# also execute commands on stack and get ready to do something with output
-			pass
+		elif expecting == "argument":	# Parses other arguments, including wildcards
+			# Wildcard handling. Expands element within its token 
+			if "*" in element:
+				for name in glob.glob(element):
+					arg_list.append(name)
+				print(arg_list)
+			else:
+				arg_list.append(element)
+				print(element + " appended to arg list")
+			if i != len(tokens) - 1:	# Checks for upcoming operators
+				next_token = tokens[i + 1]
+				if next_token in special_operators:
+					print(next_token) 
+					expecting = "operator"
 		if expecting == "operator":	# Dealing with operators
+			# depending on operator, execute arg first and then do stuff with it
 			# after doing certain functions, expecting = target
 			pass
 		if expecting == "target":	# Dealing with operator target files
 			pass
 
+		if i == len(tokens) - 1 and len(tokens) > 1:	# Execute arg list
+			cmd = subprocess.Popen(arg_list)
+			cmd.wait()
+	
 
 
 # Indicate superuser
