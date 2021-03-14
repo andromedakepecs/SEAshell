@@ -71,6 +71,7 @@ def parse(tokens):
 	special_operators = [">", "<", "|", "&"]
 	expecting = "command"	# Shell always begins by expecting command
 	arg_list = []	
+	print(tokens)
 	for i in range(len(tokens)):
 		element = tokens[i]
 		# TODO other special cases
@@ -111,8 +112,12 @@ def parse(tokens):
 				else:
 					print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
 		elif expecting == "argument":	# Parses other arguments, including wildcards
-			# Wildcard handling. Expands element within its token 
+			# Wildcard expansion
 			if "*" in element:
+				for name in glob.glob(element):
+					arg_list.append(name)
+				print(arg_list)
+			if "?" in element:
 				for name in glob.glob(element):
 					arg_list.append(name)
 				print(arg_list)
@@ -124,14 +129,14 @@ def parse(tokens):
 				if next_token in special_operators:
 					print(next_token) 
 					expecting = "operator"
-		if expecting == "operator":	# Dealing with operators
+		elif expecting == "operator":	# Dealing with operators
 			# depending on operator, execute arg first and then do stuff with it
 			# after doing certain functions, expecting = target
 			pass
-		if expecting == "target":	# Dealing with operator target files
+		elif expecting == "target":	# Dealing with operator target files
 			pass
-
-		if i == len(tokens) - 1 and len(tokens) > 1:	# Execute arg list
+		print(arg_list)
+		if i == len(tokens) - 1 and len(tokens) > 1:	# Execute arg list. Doesn't account for operators
 			cmd = subprocess.Popen(arg_list)
 			cmd.wait()
 	
