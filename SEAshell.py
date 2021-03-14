@@ -70,8 +70,13 @@ def tokenize(inp):
 def parse(tokens):
 	special_operators = [">", "<", "|", "&"]
 	expecting = "command"	# Shell always begins by expecting command
-	arg_list = []	
-	print(tokens)
+	arg_list = []
+	tmp = []
+
+	contains_operators = False
+	waiting_pipe_connection = False
+
+	# print(tokens)
 	for i in range(len(tokens)):
 		element = tokens[i]
 		# TODO other special cases
@@ -108,39 +113,70 @@ def parse(tokens):
 						else:
 							arg_list.append(os.path.expanduser('~') + element)
 						expecting = "argument"
-						print(element + " appended to arg list. Expecting argument")
+						# print(element + " appended to arg list. Expecting argument")
 				else:
 					print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
+					break	# Stops if first command bad
+
 		elif expecting == "argument":	# Parses other arguments, including wildcards
 			# Wildcard expansion
 			if "*" in element:
 				for name in glob.glob(element):
 					arg_list.append(name)
-				print(arg_list)
+				# print(arg_list)
 			if "?" in element:
 				for name in glob.glob(element):
 					arg_list.append(name)
-				print(arg_list)
+				# print(arg_list)
+			if "[" and "]" in element:
+				for name in glob.glob(element):
+					arg_list.append(name)
 			else:
 				arg_list.append(element)
-				print(element + " appended to arg list")
+				# print(element + " appended to arg list")
 			if i != len(tokens) - 1:	# Checks for upcoming operators
 				next_token = tokens[i + 1]
 				if next_token in special_operators:
-					print(next_token) 
+					# print(next_token) 
 					expecting = "operator"
+
 		elif expecting == "operator":	# Dealing with operators
 			# depending on operator, execute arg first and then do stuff with it
 			# after doing certain functions, expecting = target
-			pass
+			contains_operators = True
+			if element == "|":	
+				waiting_pipe_connection = True
+				expecting = "command"
+				tmp = arg_list
+				arg_list = []
+			elif element == ">":
+				pass
+			elif element == "<":
+				pass
+			elif element == "&":
+				pass
 		elif expecting == "target":	# Dealing with operator target files
 			pass
-		print(arg_list)
-		if i == len(tokens) - 1 and len(tokens) > 1:	# Execute arg list. Doesn't account for operators
-			cmd = subprocess.Popen(arg_list)
-			cmd.wait()
-	
 
+		try:
+			if waiting_pipe_connection:
+				if i == len(tokens) - 1 or expecting == "operator":
+				# print("tmp" + str(tmp))
+				# print("arglist" + str(arg_list))
+					cmd = subprocess.Popen(tmp, stdout=subprocess.PIPE)
+				# print("cmd" + str(cmd))
+					pipe = subprocess.check_output(arg_list, stdin=cmd.stdout, universal_newlines=True)
+					print(pipe)
+
+		# print(arg_list)
+
+		# Execute arg list, assuming no operators
+			if not contains_operators:
+				if i == len(tokens) - 1 and len(tokens) > 1:
+					cmd = subprocess.Popen(arg_list)
+					cmd.wait()
+		except Exception:
+			print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
 
 # Indicate superuser
 def prompt():
