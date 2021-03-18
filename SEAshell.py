@@ -68,13 +68,16 @@ def tokenize(inp):
 # Parses and executes tokens. Does not support semicolons.
 # TODO $(x)
 def parse(tokens):
-	special_operators = [">", "<", "|", "&"]
+	special_operators = [">", "<", "|", "&", "!"]
 	expecting = "command"	# Shell always begins by expecting command
 	arg_list = []
-	tmp = []
 
-	contains_operators = False
-	waiting_pipe_connection = False
+	waiting_op = False
+	prev_proc = 0
+	current_proc = 1
+	proc_list = []
+
+	has_operators = False
 
 	# print(tokens)
 	for i in range(len(tokens)):
@@ -103,7 +106,7 @@ def parse(tokens):
 				if xok_bin or xok_usrbin or xok_cwd or xok_homedir:	# Check if executable 
 					if len(tokens) == 1:
 						subprocess.run(tokens)	# Execute tokens if only one command
-					else:
+					else:	# Appends full path just in case
 						if xok_bin:
 							arg_list.append("/bin/" + element)
 						elif xok_usrbin:
@@ -113,9 +116,8 @@ def parse(tokens):
 						else:
 							arg_list.append(os.path.expanduser('~') + element)
 						expecting = "argument"
-						# print(element + " appended to arg list. Expecting argument")
 				else:
-					print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
+					print(Color.BAD + "Command not found. Type \"help\" for help.")
 					break	# Stops if first command bad
 
 		elif expecting == "argument":	# Parses other arguments, including wildcards
@@ -123,60 +125,91 @@ def parse(tokens):
 			if "*" in element:
 				for name in glob.glob(element):
 					arg_list.append(name)
-				# print(arg_list)
 			if "?" in element:
 				for name in glob.glob(element):
 					arg_list.append(name)
-				# print(arg_list)
 			if "[" and "]" in element:
 				for name in glob.glob(element):
 					arg_list.append(name)
 			else:
 				arg_list.append(element)
-				# print(element + " appended to arg list")
 			if i != len(tokens) - 1:	# Checks for upcoming operators
 				next_token = tokens[i + 1]
 				if next_token in special_operators:
-					# print(next_token) 
 					expecting = "operator"
 
-		elif expecting == "operator":	# Dealing with operators
-			# depending on operator, execute arg first and then do stuff with it
-			# after doing certain functions, expecting = target
-			contains_operators = True
-			if element == "|":	
-				waiting_pipe_connection = True
-				expecting = "command"
-				tmp = arg_list
-				arg_list = []
+		elif expecting == "operator": 
+			proc_list.append(arg_list)
+			has_operators = True
+		
+			arg_list = []
+			if waiting_op:
+				operate(element, proc_list[prev_proc], proc_list[current_proc])
+				prev_proc += 1
+				current_proc += 1
+				waiting_op = False
+			else:
+				waiting_op = True
+
+			expecting = "command"
+
+		if i == len(tokens) - 1 and has_operators:	# Tail of operators
+			proc_list.append(arg_list)
+			operate(element, proc_list[prev_proc], proc_list[current_proc])
+
+		print("proc_list" + str(proc_list))
+
+	if not has_operators:	# Shortcut
+		try:
+			subprocess.run(arg_list)
+		except Exception:
+			print(Color.BAD + "Error")
+
+
+'''
+			op_count += 1
+			job_list.append(arg_list)
+			arg_list = []
+
+			if element == "|":
+			# redirect stdout to one end of pipe
+			# fork off code, it's filling up pipe in bg
+			# when pipe is full it blocks process until it can be read
+			# process next command direct stdin to ouput of previous pipe
+				
+				
 			elif element == ">":
 				pass
 			elif element == "<":
 				pass
-			elif element == "&":
-				pass
-		elif expecting == "target":	# Dealing with operator target files
-			pass
 
-		try:
-			if waiting_pipe_connection:
-				if i == len(tokens) - 1 or expecting == "operator":
-				# print("tmp" + str(tmp))
-				# print("arglist" + str(arg_list))
-					cmd = subprocess.Popen(tmp, stdout=subprocess.PIPE)
-				# print("cmd" + str(cmd))
-					pipe = subprocess.check_output(arg_list, stdin=cmd.stdout, universal_newlines=True)
-					print(pipe)
+			expecting = "command"
+		
+		# if no operators. 
+		# using subprocess. keep global var of previous process and current process (between operator)
+		# then, depending on operator, perform fn between processes. keep track of current, which becomes prev and so on
+		# until end is reached
 
-		# print(arg_list)
+		# also keep list of jobs
+		'''
 
-		# Execute arg list, assuming no operators
-			if not contains_operators:
-				if i == len(tokens) - 1 and len(tokens) > 1:
-					cmd = subprocess.Popen(arg_list)
-					cmd.wait()
-		except Exception:
-			print(Color.BAD + "Command not found. Type \"help\" for list of commands.")
+# Directs input and output
+def operate(operator, prev_process, current_process):
+	pass
+	# if operator == "|":
+		
+	#return out		
+
+
+# Returns number of operators in tokens
+def get_operator_num(tokens, special_operators):
+	n = 0
+	for element in tokens:
+		for op in special_operators:
+			if element == op:
+				n += 1
+	return n
+
 
 # Indicate superuser
 def prompt():
